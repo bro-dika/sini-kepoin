@@ -5,14 +5,11 @@
   <title>Sini Kepoin - URL Security Scanner</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   
-  <!-- Security Headers -->
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://kit.fontawesome.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self' https://api.sini-kepoin.vercel.app;">
-  <meta http-equiv="X-Frame-Options" content="DENY">
-  <meta http-equiv="X-Content-Type-Options" content="nosniff">
-  <meta http-equiv="Referrer-Policy" content="strict-origin-when-cross-origin">
-  
   <!-- Google Font -->
   <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap" rel="stylesheet">
+  
+  <!-- Font Awesome -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   
   <!-- CSS -->
   <link rel="stylesheet" href="style.css">
@@ -34,15 +31,15 @@
   <div class="header-right">
     <input 
       id="urlInput" 
-      placeholder="Enter URL to scan (e.g., https://example.com)" 
-      type="url"
+      placeholder="Enter URL to scan" 
+      type="text"
       autocomplete="off"
       spellcheck="false"
       onkeypress="if(event.key === 'Enter') scanURL()"
     >
     <button id="scanButton" onclick="scanURL()">
       <i class="fas fa-search"></i>
-      <span>SCAN URL</span>
+      <span>SCAN</span>
     </button>
   </div>
 </header>
@@ -50,11 +47,11 @@
 <div class="url-input-section">
   <div class="url-input-container">
     <h1 class="section-title">URL Security Scanner</h1>
-    <p class="section-subtitle">Check any URL for malware, phishing, and other security threats using VirusTotal's global threat intelligence</p>
+    <p class="section-subtitle">Check any URL for malware, phishing, and other security threats</p>
     
     <div class="url-input-group">
       <input 
-        type="url" 
+        type="text" 
         id="mainUrlInput" 
         placeholder="https://example.com"
         autocomplete="off"
@@ -63,7 +60,7 @@
       >
       <button id="mainScanButton" onclick="scanURLFromMain()">
         <i class="fas fa-shield-alt"></i>
-        <span>Scan for Threats</span>
+        <span>Scan Now</span>
       </button>
     </div>
     
@@ -76,17 +73,15 @@
 
 <div class="container">
 
-  <!-- ================= SCAN RESULTS OVERVIEW ================= -->
+  <!-- SCAN RESULTS -->
   <div class="card span-12" id="resultsCard" style="display: none;">
     <div class="card-title">
-      <i class="fas fa-poll"></i> Scan Results Overview
+      <i class="fas fa-poll"></i> Scan Results
     </div>
-    <div id="scanResults">
-      <!-- Results will be dynamically inserted here -->
-    </div>
+    <div id="scanResults"></div>
   </div>
 
-  <!-- ================= DETECTION STATISTICS ================= -->
+  <!-- DETECTION STATS -->
   <div class="card span-6">
     <div class="card-title">
       <i class="fas fa-chart-pie"></i> Detection Statistics
@@ -113,7 +108,7 @@
     </div>
   </div>
 
-  <!-- ================= SECURITY ASSESSMENT ================= -->
+  <!-- SECURITY ASSESSMENT -->
   <div class="card span-6">
     <div class="card-title">
       <i class="fas fa-shield-alt"></i> Security Assessment
@@ -124,8 +119,8 @@
           <i class="fas fa-check-circle"></i>
         </div>
         <div class="status-details">
-          <div class="status-title" id="statusTitle">Safe to Visit</div>
-          <div class="status-description" id="statusDescription">This URL appears to be safe based on our analysis</div>
+          <div class="status-title" id="statusTitle">Ready to Scan</div>
+          <div class="status-description" id="statusDescription">Enter a URL above to start scanning</div>
         </div>
       </div>
       <div class="progress-bar">
@@ -133,16 +128,16 @@
       </div>
       <div class="kv">
         <div>Threat Level</div>
-        <div id="threatLevel">Low</div>
+        <div id="threatLevel">Unknown</div>
         <div>Confidence</div>
-        <div id="confidenceScore">High</div>
+        <div id="confidenceScore">-</div>
         <div>Last Analysis</div>
-        <div id="lastAnalysis">Never scanned</div>
+        <div id="lastAnalysis">-</div>
       </div>
     </div>
   </div>
 
-  <!-- ================= VENDOR DETECTIONS ================= -->
+  <!-- VENDOR DETECTIONS -->
   <div class="card span-12">
     <div class="card-title">
       <i class="fas fa-building"></i> Security Vendor Detections
@@ -150,14 +145,14 @@
     <div id="vendorDetections">
       <div class="vendor-list" id="vendorList">
         <div class="vendor-item">
-          <div class="vendor-name">Loading vendor data...</div>
-          <div class="vendor-result">Checking</div>
+          <div class="vendor-name">Waiting for scan...</div>
+          <div class="vendor-result">-</div>
         </div>
       </div>
     </div>
   </div>
 
-  <!-- ================= ADDITIONAL ANALYSIS ================= -->
+  <!-- DETAILED ANALYSIS -->
   <div class="card span-8">
     <div class="card-title">
       <i class="fas fa-microscope"></i> Detailed Analysis
@@ -167,22 +162,22 @@
         <div class="timeline-item">
           <div class="timeline-dot"></div>
           <div class="timeline-content">
-            <div class="timeline-time">Initial Scan</div>
-            <div>URL submitted for analysis</div>
+            <div class="timeline-time">Step 1</div>
+            <div>Enter URL and click Scan Now</div>
           </div>
         </div>
         <div class="timeline-item">
           <div class="timeline-dot"></div>
           <div class="timeline-content">
-            <div class="timeline-time">Vendor Checks</div>
-            <div>Querying multiple security vendors</div>
+            <div class="timeline-time">Step 2</div>
+            <div>URL will be analyzed for threats</div>
           </div>
         </div>
         <div class="timeline-item">
           <div class="timeline-dot"></div>
           <div class="timeline-content">
-            <div class="timeline-time">Result Compilation</div>
-            <div>Aggregating detection results</div>
+            <div class="timeline-time">Step 3</div>
+            <div>View comprehensive security report</div>
           </div>
         </div>
       </div>
@@ -200,32 +195,32 @@
     </div>
   </div>
 
-  <!-- ================= SECURITY TIPS ================= -->
+  <!-- SECURITY TIPS -->
   <div class="card span-4">
     <div class="card-title">
       <i class="fas fa-lightbulb"></i> Security Tips
     </div>
     <div class="security-tips">
       <div class="tip-item">
-        <div class="tip-icon">✓</div>
+        <div class="tip-icon"><i class="fas fa-check"></i></div>
         <div>Always check URLs before clicking, especially in emails</div>
       </div>
       <div class="tip-item">
-        <div class="tip-icon">⚠</div>
+        <div class="tip-icon"><i class="fas fa-exclamation-triangle"></i></div>
         <div>Look for HTTPS and valid SSL certificates</div>
       </div>
       <div class="tip-item">
-        <div class="tip-icon">🔒</div>
+        <div class="tip-icon"><i class="fas fa-lock"></i></div>
         <div>Use a password manager to avoid phishing sites</div>
       </div>
       <div class="tip-item">
-        <div class="tip-icon">🔄</div>
+        <div class="tip-icon"><i class="fas fa-sync-alt"></i></div>
         <div>Keep your browser and antivirus updated</div>
       </div>
     </div>
   </div>
 
-  <!-- ================= SCAN HISTORY ================= -->
+  <!-- SCAN HISTORY -->
   <div class="card span-12">
     <div class="card-title">
       <i class="fas fa-history"></i> Recent Scans
@@ -234,27 +229,19 @@
       <div class="history-item">
         <div class="history-url">https://example.com</div>
         <div class="history-result safe">Safe</div>
-        <div class="history-time">Just now</div>
+        <div class="history-time">Demo</div>
       </div>
       <div class="history-item">
         <div class="history-url">https://google.com</div>
         <div class="history-result safe">Safe</div>
-        <div class="history-time">2 mins ago</div>
+        <div class="history-time">Demo</div>
       </div>
       <div class="history-item">
         <div class="history-url">http://malware.test.com</div>
         <div class="history-result danger">Malicious</div>
-        <div class="history-time">5 mins ago</div>
+        <div class="history-time">Demo</div>
       </div>
     </div>
-  </div>
-
-  <!-- ================= RAW DATA (DEBUG) ================= -->
-  <div class="card span-12" style="display: none;" id="rawDataCard">
-    <div class="card-title">
-      <i class="fas fa-code"></i> Raw Analysis Data
-    </div>
-    <pre id="rawData">No data available</pre>
   </div>
 
 </div>
@@ -267,28 +254,24 @@
     </div>
     
     <div class="footer-links">
-      <a href="#" onclick="showPrivacyPolicy()">Privacy Policy</a>
-      <a href="#" onclick="showTerms()">Terms of Service</a>
+      <a href="#" onclick="showPrivacyPolicy()">Privacy</a>
+      <a href="#" onclick="showTerms()">Terms</a>
       <a href="#" onclick="showSecurityInfo()">Security</a>
       <a href="#" onclick="showAbout()">About</a>
     </div>
     
     <div class="security-disclaimer">
-      This service uses VirusTotal's threat intelligence. Results are for informational purposes only. 
-      We do not store or log any scanned URLs. API keys are securely stored server-side.
+      This service provides security scanning for informational purposes only.
+      We do not store or log any scanned URLs.
     </div>
     
     <div style="margin-top: 15px; font-size: 11px; opacity: 0.6;">
-      © 2026 Sini Kepoin - URL Security Scanner | Powered by VirusTotal API
+      © 2024 Sini Kepoin - URL Security Scanner
     </div>
   </div>
 </footer>
 
-<!-- Font Awesome Icons -->
-<script src="https://kit.fontawesome.com/a076d05399.js" crossorigin="anonymous"></script>
-
 <!-- JavaScript -->
-<script src="security.js"></script>
 <script src="app.js"></script>
 
 </body>
