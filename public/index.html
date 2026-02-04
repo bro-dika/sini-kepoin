@@ -38,7 +38,6 @@
             box-shadow: 0 20px 60px rgba(0,0,0,0.3);
         }
         
-        /* Header */
         header {
             background: var(--dark);
             color: white;
@@ -73,7 +72,6 @@
             margin-top: 10px;
         }
         
-        /* Main Content */
         main {
             padding: 40px;
         }
@@ -142,7 +140,6 @@
             margin-right: 8px;
         }
         
-        /* Results */
         .results {
             display: none;
             animation: fadeIn 0.5s;
@@ -269,7 +266,6 @@
         .vendor-result.suspicious { background: var(--warning); color: white; }
         .vendor-result.malicious { background: var(--danger); color: white; }
         
-        /* Loading */
         .loading {
             text-align: center;
             padding: 50px 20px;
@@ -289,7 +285,6 @@
             to { transform: rotate(360deg); }
         }
         
-        /* Footer */
         footer {
             background: var(--dark);
             color: white;
@@ -325,7 +320,6 @@
             display: inline-block;
         }
         
-        /* Responsive */
         @media (max-width: 768px) {
             .container {
                 border-radius: 0;
@@ -351,6 +345,48 @@
             .vendor-grid {
                 grid-template-columns: 1fr;
             }
+        }
+        
+        .reputation-meter {
+            margin: 20px 0;
+            padding: 20px;
+            background: white;
+            border-radius: 12px;
+            border: 1px solid #e5e7eb;
+        }
+        
+        .meter-bar {
+            height: 20px;
+            background: #e5e7eb;
+            border-radius: 10px;
+            overflow: hidden;
+            margin: 10px 0;
+            position: relative;
+        }
+        
+        .meter-fill {
+            height: 100%;
+            border-radius: 10px;
+            transition: width 0.5s ease;
+        }
+        
+        .meter-labels {
+            display: flex;
+            justify-content: space-between;
+            font-size: 12px;
+            color: #6b7280;
+            margin-top: 5px;
+        }
+        
+        .meter-value {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-weight: 700;
+            font-size: 14px;
+            color: white;
+            text-shadow: 0 1px 2px rgba(0,0,0,0.3);
         }
     </style>
 </head>
@@ -418,7 +454,7 @@
         const CONFIG = {
             API_ENDPOINT: '/api/scan',
             MAX_URL_LENGTH: 2048,
-            RATE_LIMIT: 3 // requests per minute
+            RATE_LIMIT: 3
         };
 
         let requestCount = 0;
@@ -436,7 +472,6 @@
                     throw new Error('URL terlalu panjang');
                 }
                 
-                // Tambahkan https:// jika tidak ada
                 if (!url.startsWith('http://') && !url.startsWith('https://')) {
                     url = 'https://' + url;
                 }
@@ -445,12 +480,6 @@
                 
                 if (!['http:', 'https:'].includes(parsed.protocol)) {
                     throw new Error('Hanya URL HTTP/HTTPS yang diperbolehkan');
-                }
-                
-                // Cek domain lokal
-                const localDomains = ['localhost', '127.0.0.1', '192.168.', '10.'];
-                if (localDomains.some(d => parsed.hostname.includes(d))) {
-                    throw new Error('Domain lokal tidak bisa discan');
                 }
                 
                 return {
@@ -495,19 +524,15 @@
                 const input = document.getElementById('urlInput');
                 const url = input.value.trim();
                 
-                // Validasi
                 const validation = validateURL(url);
                 if (!validation.valid) {
                     throw new Error(validation.error);
                 }
                 
-                // Cek rate limit
                 checkRateLimit();
                 
-                // Tampilkan loading
                 showLoading();
                 
-                // Kirim request ke API
                 const response = await fetch(CONFIG.API_ENDPOINT, {
                     method: 'POST',
                     headers: {
@@ -522,10 +547,8 @@
                     throw new Error(data.error || data.message || 'API error');
                 }
                 
-                // Tampilkan hasil
                 displayResults(data);
                 
-                // Update API status
                 document.getElementById('apiStatus').textContent = 'Connected';
                 document.getElementById('apiStatus').style.color = '#10b981';
                 
@@ -533,7 +556,6 @@
                 showError(error.message);
                 console.error('Scan error:', error);
                 
-                // Update API status
                 document.getElementById('apiStatus').textContent = 'Error';
                 document.getElementById('apiStatus').style.color = '#dc2626';
             }
@@ -549,19 +571,13 @@
                     <div class="loader"></div>
                     <h3>Sedang memindai URL...</h3>
                     <p>Mengirim ke VirusTotal API untuk analisis keamanan</p>
-                    <p style="color: #6b7280; font-size: 14px; margin-top: 10px;">
-                        <i class="fas fa-sync-alt fa-spin"></i>
-                        Memproses data dari vendor keamanan...
-                    </p>
                 </div>
             `;
             
-            // Disable button
             const btn = document.getElementById('scanBtn');
             btn.disabled = true;
             btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> SEDANG SCAN...';
             
-            // Scroll ke hasil
             setTimeout(() => {
                 document.getElementById('results').scrollIntoView({ 
                     behavior: 'smooth' 
@@ -570,29 +586,45 @@
         }
 
         // ==========================
-        // TAMPILKAN HASIL
+        // TAMPILKAN HASIL - FIXED LOGIC
         // ==========================
         function displayResults(data) {
             const attributes = data.data.attributes;
             const stats = attributes.stats;
+            const reputation = attributes.reputation || 50;
             
-            // Tentukan status
-            let status, statusClass, statusText, statusIcon;
-            if (stats.malicious > 0) {
-                status = 'danger';
-                statusClass = 'danger';
-                statusText = 'BERBAHAYA';
-                statusIcon = 'fa-skull-crossbones';
-            } else if (stats.suspicious > 0) {
-                status = 'warning';
+            // FIXED: Use status from API, don't recalculate
+            const status = attributes.status;
+            
+            // FIXED: Map status correctly
+            let statusClass, statusText, statusIcon;
+            switch(status) {
+                case 'malicious':
+                    statusClass = 'danger';
+                    statusText = 'BERBAHAYA';
+                    statusIcon = 'fa-skull-crossbones';
+                    break;
+                case 'suspicious':
+                    statusClass = 'warning';
+                    statusText = 'MENYANGKA';
+                    statusIcon = 'fa-exclamation-triangle';
+                    break;
+                case 'harmless':
+                    statusClass = 'safe';
+                    statusText = 'AMAN';
+                    statusIcon = 'fa-check-circle';
+                    break;
+                default:
+                    statusClass = 'warning';
+                    statusText = 'TIDAK DIKETAHUI';
+                    statusIcon = 'fa-question-circle';
+            }
+            
+            // FIXED: If harmless but reputation is 0-30, show warning
+            if (status === 'harmless' && reputation <= 30) {
                 statusClass = 'warning';
-                statusText = 'MENYANGKA';
+                statusText = 'HATI-HATI';
                 statusIcon = 'fa-exclamation-triangle';
-            } else {
-                status = 'safe';
-                statusClass = 'safe';
-                statusText = 'AMAN';
-                statusIcon = 'fa-check-circle';
             }
             
             // Update status badge
@@ -603,7 +635,7 @@
             // Vendor results
             const vendors = attributes.last_analysis_results || {};
             const vendorList = Object.entries(vendors)
-                .slice(0, 12) // Tampilkan 12 vendor pertama
+                .slice(0, 12)
                 .map(([name, result]) => `
                     <div class="vendor-item ${result.category}">
                         <span class="vendor-name">${name}</span>
@@ -614,11 +646,26 @@
                 `).join('');
             
             // Total scans
-            const totalScans = stats.malicious + stats.suspicious + 
-                             stats.harmless + stats.undetected;
+            const totalScans = attributes.total_scans || 0;
             
-            // Reputation score
-            const reputation = attributes.reputation || 0;
+            // Reputation meter color
+            let repColor, repText;
+            if (reputation >= 80) {
+                repColor = '#10b981';
+                repText = 'Sangat Baik';
+            } else if (reputation >= 60) {
+                repColor = '#f59e0b';
+                repText = 'Baik';
+            } else if (reputation >= 40) {
+                repColor = '#f97316';
+                repText = 'Cukup';
+            } else if (reputation >= 20) {
+                repColor = '#dc2626';
+                repText = 'Buruk';
+            } else {
+                repColor = '#991b1b';
+                repText = 'Sangat Buruk';
+            }
             
             // Build HTML
             document.getElementById('scanDetails').innerHTML = `
@@ -626,7 +673,7 @@
                     <h3 style="color: #374151; margin-bottom: 10px;">
                         <i class="fas fa-link"></i> URL yang Discan
                     </h3>
-                    <div style="background: #f1f5f9; padding: 12px; border-radius: 8px; font-family: monospace;">
+                    <div style="background: #f1f5f9; padding: 12px; border-radius: 8px; font-family: monospace; word-break: break-all;">
                         ${attributes.url}
                     </div>
                 </div>
@@ -650,6 +697,24 @@
                     </div>
                 </div>
                 
+                <div class="reputation-meter">
+                    <h3 style="color: #374151; margin-bottom: 15px;">
+                        <i class="fas fa-chart-line"></i> Skor Reputasi
+                    </h3>
+                    <div class="meter-bar">
+                        <div class="meter-fill" id="meterFill" style="width: ${reputation}%; background: ${repColor};"></div>
+                        <div class="meter-value">${reputation}/100</div>
+                    </div>
+                    <div class="meter-labels">
+                        <span>Buruk</span>
+                        <span>${repText}</span>
+                        <span>Baik</span>
+                    </div>
+                    <p style="color: #6b7280; font-size: 14px; margin-top: 10px;">
+                        Skor reputasi: <strong style="color: ${repColor};">${reputation}/100</strong> - ${repText}
+                    </p>
+                </div>
+                
                 <div style="margin: 30px 0; padding: 20px; background: linear-gradient(90deg, #f8fafc, #ffffff); border-radius: 12px;">
                     <div style="display: flex; align-items: center; gap: 15px; margin-bottom: 15px;">
                         <div style="font-size: 48px; color: var(--${statusClass});">
@@ -664,21 +729,6 @@
                                   `${stats.suspicious} vendor menemukan aktivitas mencurigakan` :
                                   'Tidak ada ancaman terdeteksi'}
                             </p>
-                        </div>
-                    </div>
-                    
-                    <div style="display: flex; gap: 20px; flex-wrap: wrap;">
-                        <div style="background: white; padding: 15px; border-radius: 10px; flex: 1; min-width: 200px;">
-                            <div style="font-size: 12px; color: #6b7280; margin-bottom: 5px;">Reputasi</div>
-                            <div style="font-size: 28px; font-weight: 700; color: ${reputation > 70 ? '#10b981' : reputation > 40 ? '#f59e0b' : '#dc2626'}">
-                                ${reputation}/100
-                            </div>
-                        </div>
-                        <div style="background: white; padding: 15px; border-radius: 10px; flex: 1; min-width: 200px;">
-                            <div style="font-size: 12px; color: #6b7280; margin-bottom: 5px;">Terakhir Diperbarui</div>
-                            <div style="font-size: 16px; font-weight: 600; color: #374151;">
-                                ${new Date(attributes.last_analysis_date * 1000).toLocaleDateString('id-ID')}
-                            </div>
                         </div>
                     </div>
                 </div>
@@ -700,15 +750,22 @@
                         <div>
                             <strong>Data dari VirusTotal API</strong>
                             <div style="font-size: 13px; color: #0c4a6e; margin-top: 5px;">
-                                Scan ID: ${data.meta?.scan_id || 'N/A'} | 
-                                Waktu: ${new Date(data.meta?.timestamp).toLocaleTimeString('id-ID')}
+                                Scan selesai: ${new Date().toLocaleTimeString('id-ID')}
                             </div>
                         </div>
                     </div>
                 </div>
+                
+                ${data._fallback ? `
+                    <div style="margin-top: 20px; padding: 15px; background: #fef3c7; border-radius: 10px; border: 1px solid #fbbf24;">
+                        <div style="color: #92400e; font-size: 14px;">
+                            <i class="fas fa-info-circle"></i> 
+                            <strong>Note:</strong> Menggunakan data simulasi. ${data._error ? 'Error: ' + data._error : ''}
+                        </div>
+                    </div>
+                ` : ''}
             `;
             
-            // Enable button kembali
             const btn = document.getElementById('scanBtn');
             btn.disabled = false;
             btn.innerHTML = '<i class="fas fa-search"></i> SCAN URL';
@@ -741,90 +798,41 @@
                 </div>
             `;
             
-            // Enable button
             const btn = document.getElementById('scanBtn');
             btn.disabled = false;
             btn.innerHTML = '<i class="fas fa-search"></i> SCAN URL';
         }
 
         // ==========================
-        // FUNGSI MODAL
+        // MODAL FUNCTIONS
         // ==========================
         function showPrivacy() {
-            alert(`KEBIJAKAN PRIVASI
-
-1. DATA PRIBADI
-• Kami TIDAK menyimpan URL yang Anda scan
-• Kami TIDAK mencatat IP address Anda
-• Semua proses dilakukan via VirusTotal API
-
-2. KEAMANAN
-• URL dikirim langsung ke VirusTotal
-• Tidak ada penyimpanan data di server kami
-• Komunikasi dienkripsi dengan HTTPS
-
-3. VIRUSTOTAL
-• VirusTotal memiliki kebijakan privasi sendiri
-• Kunjungi virustotal.com untuk detail lengkap`);
+            alert(`KEBIJAKAN PRIVASI\n\n1. Kami TIDAK menyimpan URL yang Anda scan\n2. Menggunakan VirusTotal API\n3. Semua data diproses oleh VirusTotal`);
         }
 
         function showAbout() {
-            alert(`TENTANG SINI KEPOIN
-
-Scanner keamanan URL menggunakan VirusTotal API.
-
-FITUR:
-• Scanning URL dengan VirusTotal asli
-• Analisis dari 70+ vendor keamanan
-• Deteksi malware, phishing, & ancaman
-• Hasil real-time dari database global
-
-TEKNOLOGI:
-• Frontend: HTML, CSS, JavaScript
-• Backend: Vercel Serverless Functions
-• API: VirusTotal Enterprise API
-
-Untuk keamanan digital yang lebih baik.`);
+            alert(`TENTANG\n\nScanner URL dengan VirusTotal API\nMenggunakan API asli untuk scanning keamanan`);
         }
 
         function showTerms() {
-            alert(`SYARAT PENGGUNAAN
-
-1. PENGGUNAAN YANG DIJINKKAN
-• Untuk pengecekan keamanan pribadi
-• Testing aplikasi/web development
-• Pendidikan keamanan siber
-
-2. BATASAN
-• Maksimal 3 scan per menit
-• Tidak untuk spam/abuse
-• Patuhi ToS VirusTotal
-
-3. TANGGUNG JAWAB
-• Hasil berdasarkan data VirusTotal
-• Tidak ada jaminan akurasi 100%
-• Gunakan sebagai referensi saja`);
+            alert(`SYARAT LAYANAN\n\n1. Maksimal 3 scan per menit\n2. Gunakan untuk keperluan legit\n3. Patuhi ToS VirusTotal`);
         }
 
         // ==========================
         // INISIALISASI
         // ==========================
         function init() {
-            // Event listener untuk scan button
             document.getElementById('scanBtn').addEventListener('click', scanURL);
             
-            // Enter key untuk input
             document.getElementById('urlInput').addEventListener('keypress', (e) => {
                 if (e.key === 'Enter') scanURL();
             });
             
-            // Auto-focus input
             document.getElementById('urlInput').focus();
             
-            console.log('Sini Kepoin siap digunakan!');
+            console.log('Sini Kepoin ready');
         }
 
-        // Jalankan saat halaman dimuat
         window.addEventListener('DOMContentLoaded', init);
     </script>
 </body>
