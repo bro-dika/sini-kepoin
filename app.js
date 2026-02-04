@@ -13,6 +13,32 @@ const CONFIG = {
 };
 
 // ==========================
+// UTILITY FUNCTIONS
+// ==========================
+// Fungsi helper untuk format waktu yang konsisten
+function formatTime(timestamp) {
+    const date = new Date(timestamp);
+    return date.toLocaleTimeString('id-ID', { 
+        hour: '2-digit', 
+        minute: '2-digit',
+        hour12: false 
+    });
+}
+
+function formatDateTime(timestamp) {
+    const date = new Date(timestamp);
+    return date.toLocaleString('id-ID', {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        hour12: false
+    });
+}
+
+// ==========================
 // STATE MANAGEMENT
 // ==========================
 const AppState = {
@@ -26,6 +52,14 @@ const AppState = {
             const saved = localStorage.getItem('siniKepoinHistory');
             if (saved) {
                 this.scanHistory = JSON.parse(saved);
+                // Pastikan semua entry memiliki timestamp yang valid
+                this.scanHistory = this.scanHistory.map(entry => {
+                    if (!entry.timestamp) {
+                        // Jika tidak ada timestamp, buat yang baru berdasarkan waktu sekarang dikurangi incremental
+                        entry.timestamp = Date.now() - Math.random() * 86400000; // Random dalam 24 jam terakhir
+                    }
+                    return entry;
+                });
                 this.updateHistoryUI();
             }
         } catch (e) {
@@ -42,11 +76,12 @@ const AppState = {
     },
     
     addToHistory(url, result) {
+        const timestamp = Date.now();
         const entry = {
             url: url,
             result: result,
-            timestamp: Date.now(),
-            time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+            timestamp: timestamp,
+            formattedTime: formatTime(timestamp) // Simpan format waktu yang konsisten
         };
         
         this.scanHistory.unshift(entry);
@@ -66,7 +101,7 @@ const AppState = {
             return;
         }
         
-        // Clear only dynamically added items (keep first 3 demo items)
+        // Clear hanya item yang ditambahkan secara dinamis (keep 3 demo items pertama)
         const children = historyContainer.children;
         while (children.length > 3) {
             historyContainer.removeChild(children[children.length - 1]);
@@ -78,6 +113,9 @@ const AppState = {
             const statusText = entry.result === 'danger' ? 'Malicious' : 
                               entry.result === 'warning' ? 'Suspicious' : 'Safe';
             
+            // Gunakan formattedTime jika ada, jika tidak format dari timestamp
+            const displayTime = entry.formattedTime || formatTime(entry.timestamp || Date.now());
+            
             const div = document.createElement('div');
             div.className = 'history-item';
             div.innerHTML = `
@@ -87,7 +125,9 @@ const AppState = {
                 <div class="history-result ${entry.result}">
                     ${statusText}
                 </div>
-                <div class="history-time">${entry.time}</div>
+                <div class="history-time" title="${formatDateTime(entry.timestamp || Date.now())}">
+                    ${displayTime}
+                </div>
             `;
             
             div.addEventListener('click', () => {
@@ -328,20 +368,23 @@ function getMockVirusTotalResponse(url) {
         }
     });
     
+    const currentTimestamp = Date.now();
+    
     return {
         data: {
             attributes: {
                 stats: response.stats,
                 status: response.status,
                 reputation: response.reputation,
-                last_analysis_date: Math.floor(Date.now() / 1000) - Math.floor(Math.random() * 86400),
+                last_analysis_date: Math.floor(currentTimestamp / 1000) - Math.floor(Math.random() * 86400),
                 last_analysis_results: results,
                 url: url,
                 title: `Scan results for ${domain}`,
                 categories: { [domain]: response.category },
                 ssl_info: {
                     valid: url.startsWith('https://') || Math.random() > 0.3
-                }
+                },
+                scan_timestamp: currentTimestamp // Tambahkan timestamp scan
             }
         }
     };
@@ -478,7 +521,9 @@ const UI = {
             
             const lastAnalysis = document.getElementById('lastAnalysis');
             if (lastAnalysis) {
-                lastAnalysis.textContent = new Date(attributes.last_analysis_date * 1000).toLocaleString();
+                // Gunakan timestamp dari scan jika ada, jika tidak gunakan last_analysis_date
+                const timestamp = attributes.scan_timestamp || (attributes.last_analysis_date * 1000);
+                lastAnalysis.textContent = formatDateTime(timestamp);
             }
             
             const threatLevelBar = document.getElementById('threatLevelBar');
@@ -533,6 +578,12 @@ const UI = {
             if (domainAgeEl) domainAgeEl.textContent = 'Unknown';
             if (sslStatusEl) sslStatusEl.textContent = sslStatus;
             if (reputationScoreEl) reputationScoreEl.textContent = `${reputationScore}/100`;
+            
+            // Update scan time jika ada elemen untuk itu
+            const scanTimeEl = document.getElementById('scanTime');
+            if (scanTimeEl && attributes.scan_timestamp) {
+                scanTimeEl.textContent = formatDateTime(attributes.scan_timestamp);
+            }
         } catch (error) {
             console.error('Error updating detailed analysis:', error);
         }
@@ -548,11 +599,15 @@ const UI = {
             
             const totalDetections = attributes.stats.malicious + attributes.stats.suspicious + attributes.stats.undetected;
             const reputationScore = attributes.reputation || 0;
+            const scanTime = attributes.scan_timestamp ? formatDateTime(attributes.scan_timestamp) : 'Just now';
             
             scanResults.innerHTML = `
                 <div class="scan-results">
                     <div class="result-overview">
                         <h3 style="color: var(--accent); margin-bottom: 10px;">Scan Complete</h3>
+                        <div class="scan-time" style="font-size: 12px; color: var(--muted); margin-bottom: 10px;">
+                            <i class="fas fa-clock"></i> Scanned at: ${scanTime}
+                        </div>
                         <div class="url-display">
                             <strong>Scanned URL:</strong><br>
                             ${AppState.sanitize(attributes.url)}
@@ -587,10 +642,14 @@ const UI = {
         try {
             const scanResults = document.getElementById('scanResults');
             if (scanResults) {
+                const errorTime = formatDateTime(Date.now());
                 scanResults.innerHTML = `
                     <div class="error-message">
                         <h3 style="margin-bottom: 10px;"><i class="fas fa-exclamation-triangle"></i> Scan Failed</h3>
                         <p>${AppState.sanitize(message)}</p>
+                        <div style="font-size: 12px; color: var(--muted); margin-top: 10px;">
+                            <i class="fas fa-clock"></i> Error occurred at: ${errorTime}
+                        </div>
                         <button onclick="scanURL()" class="btn" style="margin-top: 10px;">
                             <i class="fas fa-redo"></i> Try Again
                         </button>
@@ -904,8 +963,19 @@ function initApp() {
         UI.setupInputValidation();
         UI.setupEventListeners();
         
-        // Setup demo history items
-        document.querySelectorAll('.history-item').forEach(item => {
+        // Setup demo history items dengan timestamp yang konsisten
+        const demoItems = document.querySelectorAll('.history-item');
+        const now = Date.now();
+        
+        demoItems.forEach((item, index) => {
+            // Set timestamp untuk demo items (waktu sekarang dikurangi menit yang berbeda)
+            const demoTime = now - (index * 60000); // 1 menit berbeda untuk setiap item
+            const timeElement = item.querySelector('.history-time');
+            if (timeElement) {
+                timeElement.textContent = formatTime(demoTime);
+                timeElement.title = formatDateTime(demoTime);
+            }
+            
             item.addEventListener('click', function() {
                 const url = this.querySelector('.history-url').textContent;
                 const mainInput = document.getElementById('mainUrlInput');
@@ -921,6 +991,16 @@ function initApp() {
             const mainInput = document.getElementById('mainUrlInput');
             if (mainInput && !mainInput.value) {
                 mainInput.value = 'https://example.com';
+            }
+            
+            // Update waktu di footer
+            const footerTime = document.getElementById('currentTime');
+            if (footerTime) {
+                footerTime.textContent = formatDateTime(Date.now());
+                // Update waktu setiap menit
+                setInterval(() => {
+                    footerTime.textContent = formatDateTime(Date.now());
+                }, 60000);
             }
         }, 500);
         
@@ -946,3 +1026,5 @@ window.showPrivacyPolicy = showPrivacyPolicy;
 window.showTerms = showTerms;
 window.showSecurityInfo = showSecurityInfo;
 window.showAbout = showAbout;
+window.formatTime = formatTime;
+window.formatDateTime = formatDateTime;
