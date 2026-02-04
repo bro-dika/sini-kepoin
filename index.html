@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Sini Kepoin - URL Security Scanner</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  
+  <!-- Security Headers -->
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://kit.fontawesome.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self' https://api.sini-kepoin.vercel.app;">
+  <meta http-equiv="X-Frame-Options" content="DENY">
+  <meta http-equiv="X-Content-Type-Options" content="nosniff">
+  <meta http-equiv="Referrer-Policy" content="strict-origin-when-cross-origin">
+  
+  <!-- Google Font -->
+  <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap" rel="stylesheet">
+  
+  <!-- CSS -->
+  <link rel="stylesheet" href="style.css">
+  
+  <!-- Favicon -->
+  <link rel="icon" type="image/x-icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🔍</text></svg>">
+</head>
+<body class="dark-mode">
+
+<header>
+  <div class="brand" onclick="window.location.reload()">
+    <div class="brand-logo">🔍</div>
+    <div>Sini <span>Kepoin</span></div>
+  </div>
+  <div class="security-badge">
+    <i class="fas fa-shield-alt"></i>
+    <span>Secure Scan</span>
+  </div>
+  <div class="header-right">
+    <input 
+      id="urlInput" 
+      placeholder="Enter URL to scan (e.g., https://example.com)" 
+      type="url"
+      autocomplete="off"
+      spellcheck="false"
+      onkeypress="if(event.key === 'Enter') scanURL()"
+    >
+    <button id="scanButton" onclick="scanURL()">
+      <i class="fas fa-search"></i>
+      <span>SCAN URL</span>
+    </button>
+  </div>
+</header>
+
+<div class="url-input-section">
+  <div class="url-input-container">
+    <h1 class="section-title">URL Security Scanner</h1>
+    <p class="section-subtitle">Check any URL for malware, phishing, and other security threats using VirusTotal's global threat intelligence</p>
+    
+    <div class="url-input-group">
+      <input 
+        type="url" 
+        id="mainUrlInput" 
+        placeholder="https://example.com"
+        autocomplete="off"
+        spellcheck="false"
+        onkeypress="if(event.key === 'Enter') scanURLFromMain()"
+      >
+      <button id="mainScanButton" onclick="scanURLFromMain()">
+        <i class="fas fa-shield-alt"></i>
+        <span>Scan for Threats</span>
+      </button>
+    </div>
+    
+    <div class="input-hint">
+      <i class="fas fa-info-circle"></i>
+      Enter a complete URL including http:// or https://
+    </div>
+  </div>
+</div>
+
+<div class="container">
+
+  <!-- ================= SCAN RESULTS OVERVIEW ================= -->
+  <div class="card span-12" id="resultsCard" style="display: none;">
+    <div class="card-title">
+      <i class="fas fa-poll"></i> Scan Results Overview
+    </div>
+    <div id="scanResults">
+      <!-- Results will be dynamically inserted here -->
+    </div>
+  </div>
+
+  <!-- ================= DETECTION STATISTICS ================= -->
+  <div class="card span-6">
+    <div class="card-title">
+      <i class="fas fa-chart-pie"></i> Detection Statistics
+    </div>
+    <div id="detectionStats">
+      <div class="detection-stats">
+        <div class="stat-item">
+          <div class="stat-label">Total Scans</div>
+          <div class="stat-value" id="totalScans">0</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-label">Malicious</div>
+          <div class="stat-value danger" id="maliciousCount">0</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-label">Suspicious</div>
+          <div class="stat-value warning" id="suspiciousCount">0</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-label">Clean</div>
+          <div class="stat-value safe" id="cleanCount">0</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= SECURITY ASSESSMENT ================= -->
+  <div class="card span-6">
+    <div class="card-title">
+      <i class="fas fa-shield-alt"></i> Security Assessment
+    </div>
+    <div id="securityAssessment">
+      <div class="security-status">
+        <div class="status-icon safe" id="statusIcon">
+          <i class="fas fa-check-circle"></i>
+        </div>
+        <div class="status-details">
+          <div class="status-title" id="statusTitle">Safe to Visit</div>
+          <div class="status-description" id="statusDescription">This URL appears to be safe based on our analysis</div>
+        </div>
+      </div>
+      <div class="progress-bar">
+        <div class="progress-fill" id="threatLevelBar" style="width: 0%"></div>
+      </div>
+      <div class="kv">
+        <div>Threat Level</div>
+        <div id="threatLevel">Low</div>
+        <div>Confidence</div>
+        <div id="confidenceScore">High</div>
+        <div>Last Analysis</div>
+        <div id="lastAnalysis">Never scanned</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= VENDOR DETECTIONS ================= -->
+  <div class="card span-12">
+    <div class="card-title">
+      <i class="fas fa-building"></i> Security Vendor Detections
+    </div>
+    <div id="vendorDetections">
+      <div class="vendor-list" id="vendorList">
+        <div class="vendor-item">
+          <div class="vendor-name">Loading vendor data...</div>
+          <div class="vendor-result">Checking</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= ADDITIONAL ANALYSIS ================= -->
+  <div class="card span-8">
+    <div class="card-title">
+      <i class="fas fa-microscope"></i> Detailed Analysis
+    </div>
+    <div id="detailedAnalysis">
+      <div class="timeline">
+        <div class="timeline-item">
+          <div class="timeline-dot"></div>
+          <div class="timeline-content">
+            <div class="timeline-time">Initial Scan</div>
+            <div>URL submitted for analysis</div>
+          </div>
+        </div>
+        <div class="timeline-item">
+          <div class="timeline-dot"></div>
+          <div class="timeline-content">
+            <div class="timeline-time">Vendor Checks</div>
+            <div>Querying multiple security vendors</div>
+          </div>
+        </div>
+        <div class="timeline-item">
+          <div class="timeline-dot"></div>
+          <div class="timeline-content">
+            <div class="timeline-time">Result Compilation</div>
+            <div>Aggregating detection results</div>
+          </div>
+        </div>
+      </div>
+      
+      <div class="kv">
+        <div>URL Type</div>
+        <div id="urlType">-</div>
+        <div>Domain Age</div>
+        <div id="domainAge">-</div>
+        <div>SSL Certificate</div>
+        <div id="sslStatus">-</div>
+        <div>Reputation Score</div>
+        <div id="reputationScore">-</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= SECURITY TIPS ================= -->
+  <div class="card span-4">
+    <div class="card-title">
+      <i class="fas fa-lightbulb"></i> Security Tips
+    </div>
+    <div class="security-tips">
+      <div class="tip-item">
+        <div class="tip-icon">✓</div>
+        <div>Always check URLs before clicking, especially in emails</div>
+      </div>
+      <div class="tip-item">
+        <div class="tip-icon">⚠</div>
+        <div>Look for HTTPS and valid SSL certificates</div>
+      </div>
+      <div class="tip-item">
+        <div class="tip-icon">🔒</div>
+        <div>Use a password manager to avoid phishing sites</div>
+      </div>
+      <div class="tip-item">
+        <div class="tip-icon">🔄</div>
+        <div>Keep your browser and antivirus updated</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= SCAN HISTORY ================= -->
+  <div class="card span-12">
+    <div class="card-title">
+      <i class="fas fa-history"></i> Recent Scans
+    </div>
+    <div class="scan-history" id="scanHistory">
+      <div class="history-item">
+        <div class="history-url">https://example.com</div>
+        <div class="history-result safe">Safe</div>
+        <div class="history-time">Just now</div>
+      </div>
+      <div class="history-item">
+        <div class="history-url">https://google.com</div>
+        <div class="history-result safe">Safe</div>
+        <div class="history-time">2 mins ago</div>
+      </div>
+      <div class="history-item">
+        <div class="history-url">http://malware.test.com</div>
+        <div class="history-result danger">Malicious</div>
+        <div class="history-time">5 mins ago</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= RAW DATA (DEBUG) ================= -->
+  <div class="card span-12" style="display: none;" id="rawDataCard">
+    <div class="card-title">
+      <i class="fas fa-code"></i> Raw Analysis Data
+    </div>
+    <pre id="rawData">No data available</pre>
+  </div>
+
+</div>
+
+<footer>
+  <div class="footer-content">
+    <div class="brand" style="font-size: 16px; margin-bottom: 10px;">
+      <div class="brand-logo">🔍</div>
+      <div>Sini <span>Kepoin</span></div>
+    </div>
+    
+    <div class="footer-links">
+      <a href="#" onclick="showPrivacyPolicy()">Privacy Policy</a>
+      <a href="#" onclick="showTerms()">Terms of Service</a>
+      <a href="#" onclick="showSecurityInfo()">Security</a>
+      <a href="#" onclick="showAbout()">About</a>
+    </div>
+    
+    <div class="security-disclaimer">
+      This service uses VirusTotal's threat intelligence. Results are for informational purposes only. 
+      We do not store or log any scanned URLs. API keys are securely stored server-side.
+    </div>
+    
+    <div style="margin-top: 15px; font-size: 11px; opacity: 0.6;">
+      © 2026 Sini Kepoin - URL Security Scanner | Powered by VirusTotal API
+    </div>
+  </div>
+</footer>
+
+<!-- Font Awesome Icons -->
+<script src="https://kit.fontawesome.com/a076d05399.js" crossorigin="anonymous"></script>
+
+<!-- JavaScript -->
+<script src="security.js"></script>
+<script src="app.js"></script>
+
+</body>
+</html>
